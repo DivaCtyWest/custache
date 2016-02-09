@@ -3,16 +3,19 @@ CFLAGS=-c -Wall
 
 all: custache
 
-custache: custache.o
-	$(CC) custache.o -o custache
+custache: custache.o cJSON.o
+	$(CC) -o custache custache.o cJSON.o
 
 custache.o: custache.c
 	$(CC) $(CFLAGS) custache.c
 
+cJSON.o: cJSON/cJSON.c
+	$(CC) $(CFLAGS) cJSON/cJSON.c
+
 clean:
 	rm -rvf *.o
 
-clobber:
+clobber: clean
 	rm -rvf custache
 
 run: all

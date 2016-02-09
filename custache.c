@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include "cJSON/cJSON.h"
 
 /**
  * Types of template nodes
@@ -24,9 +25,9 @@ typedef struct Template {
   char *content;
 } template_t;
 
-static char *parse(template_t *, char * , char * , char * );
-static char *parse_static(template_t *, char *, char * , char * );
-static char *parse_mustache(template_t *, char * , char * , char * );
+static char *parse(template_t *, char *, char *, char *);
+static char *parse_static(template_t *, char *, char *, char *);
+static char *parse_mustache(template_t *, char *, char *, char *);
 
 static void _dump(template_t *t, unsigned int indent) {
   int i; for (i = indent; i; i--) printf(" ");
@@ -69,8 +70,8 @@ static char *parse(template_t *t, char * s, char * otag, char * ctag) {
 }
 
 /**
- * Fills the template t with static content from the string s. Returns a pointer
- * to the next character in s.
+ * Fills the template t with static content from the string s. Returns a
+ * pointer to the next character in s.
  */
 static char *parse_static(template_t *t, char * s, char * otag, char *ctag) {
   char *p = strstr(s, otag);
