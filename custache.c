@@ -25,19 +25,50 @@ typedef struct Template {
   char *content;
 } template_t;
 
+/**
+ * A View node
+ */
+typedef struct View {
+  unsigned char type;
+  char *name;
+  void *content;
+} view_t;
+
 static char *parse(template_t *, char *, char *, char *);
 static char *parse_static(template_t *, char *, char *, char *);
 static char *parse_mustache(template_t *, char *, char *, char *);
 
-static void _dump(template_t *t, unsigned int indent) {
+static void _dump_template(template_t *t, unsigned int indent) {
   int i; for (i = indent; i; i--) printf(" ");
   printf("[%p %u %p %p '%s']\n", t, t->type, t->child, t-> next, t->content);
-  if (t->child) _dump(t->child, indent + 2);
-  if (t->next)  _dump(t->next, indent);
+  if (t->child) _dump_template(t->child, indent + 2);
+  if (t->next)  _dump_template(t->next, indent);
 }
 
-static void dump(template_t *t) {
-  _dump(t, 0);
+static char *render(template_t *t, view_t *v) {
+  char *c = "";
+  switch (t->type) {
+  case STATIC: /* duplicate t->content into c */
+    break;
+  case BASIC: /* copy v.content to c */
+    break;
+  case SECTION: /* based on v's truthiness, start a new section */
+  case INVERT: /* based on v's untruthiness, start a new section */
+    break;
+  case CLOSING: /* end the current section */
+    break;
+  }
+  if (t->child) {
+    render(t->child, v);
+  }
+  if (t->next) {
+    render(t->next, v);
+  }
+  return c;
+}
+
+static void dump_template(template_t *t) {
+  _dump_template(t, 0);
 }
 
 /**
@@ -126,14 +157,20 @@ static char *parse_mustache(template_t *t, char * s, char * otag, char * ctag) {
   return p;
 }
 
+static char *parse_json() {
+
+}
+
 /**
  * Makes a template from the string s, and uses it to render content with the
  * view context. Returns the rendered result, which should then be freed.
  */
 char *custache(char *s, void *context) {
   template_t *t = calloc(1, sizeof *t);
+  view_t *v = calloc(1, sizeof *v);
+  render(t, v);
   parse(t, s, "{{", "}}");
-  dump(t);
+  dump_template(t);
   free_template(t);
   return "";
 }
