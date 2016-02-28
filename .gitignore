@@ -1,6 +1,4 @@
 .*.sw?
 *.o
 tests
-test.json
-test.mustache
 custache

@@ -32,6 +32,7 @@ static view_t *load_view(const char *);
 static char *compile_view(view_t *, const char *);
 
 static char *read_file(FILE *f) {
+  assert(f);
   fseek(f, 0, SEEK_END);
   long filesize = ftell(f);
   char *s = (char *)malloc(filesize + 1);
@@ -42,10 +43,9 @@ static char *read_file(FILE *f) {
 }
 
 static template_t *load_template_file(const char *s, const char *otag, const char *ctag) {
-  template_t *t;
   FILE *f = fopen(s, "r");
   if (!f) return NULL;
-  t = load_template_stream(f, otag, ctag);
+  template_t *t = load_template_stream(f, otag, ctag);
   fclose(f);
   return t;
 }

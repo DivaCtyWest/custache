@@ -15,19 +15,12 @@ tests: tests.o custache.o
 tests.o: tests.c
 	$(CC) $(CFLAGS) tests.c
 
-test.json:
-	echo "{ \"foo\": \"bar\" }" > test.json
-
-test.mustache:
-	echo "Hello, {{foo}}" > test.mustache
-
 clean:
-	rm -rvf *.o
-	rm -vf test test.mustache test.json
+	@rm -rf *.o
+	@rm -vf test test.mustache test.json
 
 clobber: clean
-	rm -rvf custache
+	@rm -rvf custache
 
 test: tests test.mustache test.json
 	./tests
-
