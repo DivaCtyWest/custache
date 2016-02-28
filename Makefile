@@ -9,19 +9,25 @@ custache: custache.o main.c
 custache.o: custache.c
 	$(CC) $(CFLAGS) custache.c
 
-custache.test: custache.test.o custache.o
-	$(CC) -o custache.test custache.test.o custache.o
+tests: tests.o custache.o
+	$(CC) -o tests tests.o custache.o
 
-custache.test.o: custache.test.c
-	$(CC) $(CFLAGS) custache.test.c
+tests.o: tests.c
+	$(CC) $(CFLAGS) tests.c
+
+test.json:
+	echo "{ \"foo\": \"bar\" }" > test.json
+
+test.mustache:
+	echo "Hello, {{foo}}" > test.mustache
 
 clean:
 	rm -rvf *.o
-	rm -vf custache.test test.txt
+	rm -vf test test.mustache test.json
 
 clobber: clean
 	rm -rvf custache
 
-test: custache.test
-	./custache.test
+test: tests test.mustache test.json
+	./tests
 

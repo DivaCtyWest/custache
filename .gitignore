@@ -1,5 +1,6 @@
 .*.sw?
 *.o
-test.txt
-custache.test
+tests
+test.json
+test.mustache
 custache

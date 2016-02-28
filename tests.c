@@ -38,11 +38,9 @@ static void test_template_can_be_created_from_a_string() {
 
 static void test_template_can_be_created_from_a_stream() {
   printf("\t\tcan be created from a stream");
-  FILE *f = fopen("test.txt", "w");
-  fprintf(f, "Hello, {{foo}}");
-  fclose(f);
-  f = fopen("test.txt", "r");
+  FILE *f = fopen("test.mustache", "r");
   custache_template_t *t = custache_load_template_stream(f, "{{", "}}");
+  fclose(f);
   assert(!strcmp(t->otag, "{{"));
   assert(!strcmp(t->ctag, "}}"));
   assert(t->type == CUSTACHE_TEMPLATE_STATIC);
@@ -51,15 +49,10 @@ static void test_template_can_be_created_from_a_stream() {
   assert(t->next->type == CUSTACHE_TEMPLATE_BASIC);
   assert(!strcmp(t->next->content, "foo"));
   custache_free_template(t);
-  printf(" ✓\n");
 }
 
 static void test_template_can_be_created_from_a_file() {
-  printf("\t\tcan be created from a file");
-  FILE *f = fopen("test.txt", "w");
-  fprintf(f, "Hello, {{foo}}");
-  fclose(f);
-  custache_template_t *t = custache_load_template_file("test.txt", "{{", "}}");
+  custache_template_t *t = custache_load_template_file("test.mustache", "{{", "}}");
   assert(!strcmp(t->otag, "{{"));
   assert(!strcmp(t->ctag, "}}"));
   assert(t->type == CUSTACHE_TEMPLATE_STATIC);
