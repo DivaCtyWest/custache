@@ -1,3 +1,0 @@
-watch('^custache.c') { |m| system "make all run" }
-
-# vi:ft=ruby

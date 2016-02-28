@@ -3,20 +3,25 @@ CFLAGS=-c -Wall
 
 all: custache
 
-custache: custache.o cJSON.o
-	$(CC) -o custache custache.o cJSON.o
+custache: custache.o main.c
+	$(CC) -o custache custache.o main.c
 
 custache.o: custache.c
 	$(CC) $(CFLAGS) custache.c
 
-cJSON.o: cJSON/cJSON.c
-	$(CC) $(CFLAGS) cJSON/cJSON.c
+custache.test: custache.test.o custache.o
+	$(CC) -o custache.test custache.test.o custache.o
+
+custache.test.o: custache.test.c
+	$(CC) $(CFLAGS) custache.test.c
 
 clean:
 	rm -rvf *.o
+	rm -vf custache.test test.txt
 
 clobber: clean
 	rm -rvf custache
 
-run: all
-	./custache "Hello {{name}}!\nYou have just won €{{value}}!\n{{#in_ca}}\n(Well, €{{taxed_value}}, after taxes.)\n{{/in_ca}}\nWell done!" '{"name": "JJ", "in_ca": "true", taxed_value: "6000.0", "value": 10000.0}'
+test: custache.test
+	./custache.test
+

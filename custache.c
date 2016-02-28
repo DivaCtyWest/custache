@@ -2,183 +2,216 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-#include "cJSON/cJSON.h"
+#include <errno.h>
+#include "custache.h"
 
-/**
- * Types of template nodes
- */
+typedef custache_template_t template_t;
+typedef custache_view_t view_t;
+
+#define TSTATIC CUSTACHE_TEMPLATE_STATIC
+#define TBASIC CUSTACHE_TEMPLATE_BASIC
+#define TSECTION CUSTACHE_TEMPLATE_SECTION
+#define TINVERT CUSTACHE_TEMPLATE_INVERT
+#define TCLOSING CUSTACHE_TEMPLATE_CLOSING
+
 typedef enum {
-  STATIC,
-  BASIC,
-  SECTION,
-  INVERT,
-  CLOSING
-} token_type_t;
+  VNULL, VSTRING, VNUMBER, VOBJECT, VARRAY, VTRUE, VFALSE
+} view_type_t;
 
-/**
- * A Template node
- */
-typedef struct Template {
-  unsigned char type;
-  struct Template *next;
-  struct Template *child;
-  char *content;
-} template_t;
+static char *read_file(FILE *f);
+static template_t *load_template_file(const char *, const char *, const char *);
+static template_t *load_template_stream(FILE *, const char *, const char *);
+static template_t *load_template(const char *, const char *, const char *);
+static char *compile_template(template_t *, const char *);
+static char *compile_mustache(template_t *, const char *);
+static char *compile_static(template_t *, const char *);
+static void free_template(template_t *t);
+static view_t *load_view_file(const char *);
+static view_t *load_view_stream(FILE *);
+static view_t *load_view(const char *);
+static char *compile_view(view_t *, const char *);
 
-/**
- * A View node
- */
-typedef struct View {
-  unsigned char type;
-  char *name;
-  void *content;
-} view_t;
-
-static char *parse(template_t *, char *, char *, char *);
-static char *parse_static(template_t *, char *, char *, char *);
-static char *parse_mustache(template_t *, char *, char *, char *);
-
-static void _dump_template(template_t *t, unsigned int indent) {
-  int i; for (i = indent; i; i--) printf(" ");
-  printf("[%p %u %p %p '%s']\n", t, t->type, t->child, t-> next, t->content);
-  if (t->child) _dump_template(t->child, indent + 2);
-  if (t->next)  _dump_template(t->next, indent);
+static char *read_file(FILE *f) {
+  fseek(f, 0, SEEK_END);
+  long filesize = ftell(f);
+  char *s = (char *)malloc(filesize + 1);
+  fseek(f, 0, SEEK_SET);
+  fread(s, filesize, 1, f);
+  s[(unsigned int) filesize] = 0;
+  return s;
 }
 
-static char *render(template_t *t, view_t *v) {
-  char *c = "";
-  switch (t->type) {
-  case STATIC: /* duplicate t->content into c */
-    break;
-  case BASIC: /* copy v.content to c */
-    break;
-  case SECTION: /* based on v's truthiness, start a new section */
-  case INVERT: /* based on v's untruthiness, start a new section */
-    break;
-  case CLOSING: /* end the current section */
-    break;
-  }
-  if (t->child) {
-    render(t->child, v);
-  }
-  if (t->next) {
-    render(t->next, v);
-  }
-  return c;
+static template_t *load_template_file(const char *s, const char *otag, const char *ctag) {
+  FILE *f = fopen(s, "r");
+  template_t *t = load_template_stream(f, otag, ctag);
+  fclose(f);
+  return t;
 }
 
-static void dump_template(template_t *t) {
-  _dump_template(t, 0);
+static template_t *load_template_stream(FILE *file, const char *otag, const char *ctag) {
+  char *s = read_file(file);
+  template_t *t = load_template(s, otag, ctag);
+  free(s);
+  return t;
 }
 
-/**
- * Frees the template, by freeing all children, then all following nodes, then
- * its content, and finally the template itself.
- */
-static void free_template(template_t *t) {
-  if (t->child)   free_template(t->child);
-  if (t->next)    free_template(t->next);
-  if (t->content) free(t->content);
-  free(t);
+static template_t *load_template(const char *s, const char *otag, const char *ctag) {
+  template_t *t = calloc(1, sizeof *t);
+  t->otag = strdup(otag);
+  t->ctag = strdup(ctag);
+  compile_template(t, s);
+  return t;
 }
 
-/**
- * Fills the template at t from the string at s. otag and ctag are used as
- * tag delimiters. Returns NULL if s has been parsed completely, otherwise
- * returns a pointer to the next unprocessed character in s.
- *
- * t must contain enough space for the template.
- */
-static char *parse(template_t *t, char * s, char * otag, char * ctag) {
-  char *p = strstr(s, otag);
-
+static char *compile_template(template_t *t, const char *s) {
+  if (!t->otag) t->otag = "{{";
+  if (!t->ctag) t->ctag = "}}";
+  char *p = strstr(s, t->otag);
   if (p == s)
-    p = parse_mustache(t, p + strlen(otag), otag, ctag);
+    p = compile_mustache(t, p + strlen(t->otag));
   else
-    p = parse_static(t, s, otag, ctag);
-
+    p = compile_static(t, s);
   return p;
 }
 
-/**
- * Fills the template t with static content from the string s. Returns a
- * pointer to the next character in s.
- */
-static char *parse_static(template_t *t, char * s, char * otag, char *ctag) {
-  char *p = strstr(s, otag);
-  size_t n = p ? p - s : strlen(s);
-
-  t->type = STATIC;
-  t->content = strndup(s, n);
-
-  if (p) {
-    t->next = calloc(1, sizeof *t->next);
-    p = parse(t->next, p, otag, ctag);
-  }
-
-  return p;
-}
-
-/**
- * Fills the template t with mustache content. Returns a pointer to the next
- * character in s.
- */
-static char *parse_mustache(template_t *t, char * s, char * otag, char * ctag) {
-
-  char *p = strstr(s, ctag);
+static char *compile_mustache(template_t *t, const char *s) {
+  char *p = strstr(s, t->ctag);
   assert(p);
 
   switch (*s) {
   case '#':
   case '^':
-    t->type = (*s == '#' ? SECTION : INVERT);
+    t->type = (*s == '#' ? TSECTION : TINVERT);
     t->content = strndup(s + 1, p - s - 1);
-    p += strlen(ctag);
+    p += strlen(t->ctag);
     t->child = calloc(1, sizeof *t->child);
-    p = parse(t->child, p, otag, ctag);
+    t->child->otag = strdup(t->otag);
+    t->child->ctag = strdup(t->ctag);
+    p = compile_template(t->child, p);
     break;
   case '/':
-    t->type = CLOSING;
+    t->type = TCLOSING;
     t->content = strndup(s + 1, p - s - 1);
-    p += strlen(ctag);
+    p += strlen(t->ctag);
     return p;
   default:
-    t->type = BASIC;
+    t->type = TBASIC;
     t->content = strndup(s, p - s);
-    p += strlen(ctag);
+    p += strlen(t->ctag);
     break;
   }
 
   if (p) {
     t->next = calloc(1, sizeof *t->next);
-    p = parse(t->next, p, otag, ctag);
+    t->next->otag = strdup(t->otag);
+    t->next->ctag = strdup(t->ctag);
+    p = compile_template(t->next, p);
   }
 
   return p;
 }
 
-static char *parse_json() {
+static char *compile_static(template_t *t, const char *s) {
+  char *p = strstr(s, t->otag);
+  size_t n = p ? p - s : strlen(s);
 
+  t->type = TSTATIC;
+  t->content = strndup(s, n);
+
+  if (p) {
+    t->next = calloc(1, sizeof *t->next);
+    t->next->otag = t->otag;
+    t->next->ctag = t->ctag;
+    p = compile_template(t->next, p);
+  }
+
+  return p;
 }
 
-/**
- * Makes a template from the string s, and uses it to render content with the
- * view context. Returns the rendered result, which should then be freed.
- */
-char *custache(char *s, void *context) {
-  template_t *t = calloc(1, sizeof *t);
-  view_t *v = calloc(1, sizeof *v);
-  render(t, v);
-  parse(t, s, "{{", "}}");
-  dump_template(t);
-  free_template(t);
+static void free_template(template_t *t) {
+  if (t->child) free_template(t->child);
+  if (t->next) free_template(t->next);
+  if (t->content) free(t->content);
+  free(t);
+}
+
+static char *inspect_template(template_t *v) {
+  return "INSPECT TEMPLATE";
+}
+
+static view_t *load_view_file(const char *s) {
+  FILE *f = fopen(s, "r");
+  view_t *v = load_view_stream(f);
+  fclose(f);
+  return v;
+}
+
+static view_t *load_view_stream(FILE *f) {
+  char *s = read_file(f);
+  view_t *v = load_view(s);
+  free(s);
+  return v;
+}
+
+static view_t *load_view(const char *s) {
+  view_t *v = calloc(1, sizeof v);
+  compile_view(v, s);
+  return v;
+}
+
+static char *compile_view(view_t *v, const char *s) {
+  strcpy(v->content, s);
+  return v->content;
+}
+
+static void free_view(view_t *v) {
+  if (v->child) free_view(v->child);
+  if (v->next) free_view(v->next);
+  if (v->content) free_view(v->content);
+  free(v);
+}
+
+static char *inspect_view(view_t *v) {
+  return "INSPECT VIEW";
+}
+
+void render(template_t *t, view_t *v) {
+  printf("template:[%s], view:[%s]\n", inspect_template(t), inspect_view(v));
+}
+
+custache_view_t *custache_load_view(const char *s) {
+  return load_view(s);
+}
+
+custache_view_t *custache_load_view_stream(FILE *f) {
+  return load_view_stream(f);
+}
+
+custache_view_t *custache_load_view_file(const char *s) {
+  return load_view_file(s);
+}
+
+void custache_free_view(view_t *v) {
+  free_view(v);
+}
+
+custache_template_t *custache_load_template(const char *s, const char *otag, const char *ctag) {
+  return load_template(s, otag, ctag);
+}
+
+custache_template_t *custache_load_template_stream(FILE *f, const char *otag, const char *ctag) {
+  return load_template_stream(f, otag, ctag);
+}
+
+custache_template_t *custache_load_template_file(const char *s, const char *otag, const char *ctag) {
+  return load_template_file(s, otag, ctag);
+}
+
+const char *custache_render(const custache_template_t *t, const custache_view_t *v) {
+  printf("Write me...");
   return "";
 }
 
-int main(int argc, char **argv) {
-  char *result;
-
-  result = custache(argv[1], argv[2]);
-
-  return 0;
+void custache_free_template(template_t *t) {
+  free_template(t);
 }
