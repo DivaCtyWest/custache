@@ -1,11 +1,13 @@
 #include <stdio.h>
+#include <string.h>
 #include <assert.h>
 #include "custache.h"
 
 /* view tests */
 static void test_view_can_be_created() {
-  printf("\t\tcan be created\n");
+  printf("\t\tcan be created");
   assert(1);
+  printf(" ✗\n");
 }
 
 /* template tests */
@@ -123,7 +125,7 @@ static void run_custache_tests() {
 int main(const int argc, const char **argv) {
   printf("Custache Tests\n");
   run_template_tests();
-  //run_view_tests();
-  //run_custache_tests();
+  run_view_tests();
+  run_custache_tests();
   return 0;
 }
