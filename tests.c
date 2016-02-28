@@ -61,6 +61,8 @@ static void test_template_can_be_created_from_a_file() {
   assert(t->next->type == CUSTACHE_TEMPLATE_BASIC);
   assert(!strcmp(t->next->content, "foo"));
   custache_free_template(t);
+  t = custache_load_template_file("nonexistent", "{{", "}}");
+  assert(!t);
   printf(" ✓\n");
 }
 

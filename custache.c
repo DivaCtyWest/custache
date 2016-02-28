@@ -42,14 +42,17 @@ static char *read_file(FILE *f) {
 }
 
 static template_t *load_template_file(const char *s, const char *otag, const char *ctag) {
+  template_t *t;
   FILE *f = fopen(s, "r");
-  template_t *t = load_template_stream(f, otag, ctag);
+  if (!f) return NULL;
+  t = load_template_stream(f, otag, ctag);
   fclose(f);
   return t;
 }
 
-static template_t *load_template_stream(FILE *file, const char *otag, const char *ctag) {
-  char *s = read_file(file);
+static template_t *load_template_stream(FILE *f, const char *otag, const char *ctag) {
+  if (!f) return NULL;
+  char *s = read_file(f);
   template_t *t = load_template(s, otag, ctag);
   free(s);
   return t;
