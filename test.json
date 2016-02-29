@@ -1,1 +1,20 @@
-{ "foo": "bar" }
+{
+  "name": "Alice",
+  "message_count": 2,
+  "messages": [
+    {
+      "from": "Bob",
+      "sent": "2001-02-03 04:05:06",
+      "subject": "'Sup?",
+      "message": "Just checking in.",
+      "read": "2001-02-03 05:06:07"
+    },
+    }
+      "from": "Cecil",
+      "sent": "2002-03-04 05:06:07",
+      "subject": "Yo",
+      "message": "How're things?"
+    }
+  ],
+  "avatar": "http://gravatar.com/alice@example.com"
+}

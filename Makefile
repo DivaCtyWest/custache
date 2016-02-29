@@ -3,6 +3,9 @@ CFLAGS=-c -Wall
 
 all: custache
 
+tags:
+	ctags -R .
+
 custache: custache.o main.c
 	$(CC) -o custache custache.o main.c
 
@@ -16,11 +19,10 @@ tests.o: tests.c
 	$(CC) $(CFLAGS) tests.c
 
 clean:
-	@rm -rf *.o
-	@rm -vf test test.mustache test.json
+	@rm -rf *.o test autom4te.cache autoscan.log configure config.log
 
 clobber: clean
-	@rm -rvf custache
+	@rm -rvf custache tags
 
 test: tests test.mustache test.json
 	./tests

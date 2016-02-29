@@ -1,1 +1,11 @@
-Hello, {{foo}}
+Hello, {{name}}.
+{{#message_count}}
+You have {{message_count}} messages:
+{{/message_count}}
+{{#messages}}
+- From {{from}}: {{subject}}
+{{message}}
+{{/messages}}
+{{^message_count}}
+You have no messages.
+{{/message_count}}

@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <assert.h>
 #include "custache.h"
@@ -11,27 +12,107 @@ static void test_view_can_be_created() {
 }
 
 /* template tests */
+static void test_template_content(custache_template_t *t) {
+  custache_template_t *u;
+  assert(sizeof(*t) == sizeof(custache_template_t));
+  assert(t->type == CUSTACHE_TEMPLATE_STATIC);
+  assert(!strcmp(t->content, "Hello, "));
+  assert(!t->child);
+  assert(t = t->next);
+  assert(t->type == CUSTACHE_TEMPLATE_BASIC);
+  assert(!strcmp(t->content, "name"));
+  assert(!t->child);
+  assert(t = t->next);
+  assert(t->type == CUSTACHE_TEMPLATE_STATIC);
+  assert(!strcmp(t->content, ".\n"));
+  assert(!t->child);
+  assert(t = t->next);
+  assert(t->type == CUSTACHE_TEMPLATE_SECTION);
+  assert(!strcmp(t->content, "message_count"));
+  assert(u = t->child);
+  assert(u->type == CUSTACHE_TEMPLATE_STATIC);
+  assert(!strcmp(u->content, "\nYou have "));
+  assert(!u->child);
+  assert(u = u->next);
+  assert(u->type == CUSTACHE_TEMPLATE_BASIC);
+  assert(!strcmp(u->content, "message_count"));
+  assert(!u->child);
+  assert(u = u->next);
+  assert(u->type == CUSTACHE_TEMPLATE_STATIC);
+  assert(!strcmp(u->content, " messages:\n"));
+  assert(!u->child);
+  assert(u = u->next);
+  assert(u->type == CUSTACHE_TEMPLATE_CLOSING);
+  assert(!strcmp(u->content, "message_count"));
+  assert(!u->next);
+  assert(!u->child);
+  assert(t->next);
+  assert(t = t->next);
+  assert(t->type == CUSTACHE_TEMPLATE_STATIC);
+  assert(!strcmp(t->content, "\n"));
+  assert(t = t->next);
+  assert(t->type == CUSTACHE_TEMPLATE_SECTION);
+  assert(!strcmp(t->content, "messages"));
+  assert(u = t->child);
+  assert(u->type == CUSTACHE_TEMPLATE_STATIC);
+  assert(!strcmp(u->content, "\n- From "));
+  assert(u = u->next);
+  assert(u->type == CUSTACHE_TEMPLATE_BASIC);
+  assert(!strcmp(u->content, "from"));
+  assert(u = u->next);
+  assert(u->type == CUSTACHE_TEMPLATE_STATIC);
+  assert(!strcmp(u->content, ": "));
+  assert(u = u->next);
+  assert(u->type == CUSTACHE_TEMPLATE_BASIC);
+  assert(!strcmp(u->content, "subject"));
+  assert(u = u->next);
+  assert(u->type == CUSTACHE_TEMPLATE_STATIC);
+  assert(!strcmp(u->content, "\n"));
+  assert(u = u->next);
+  assert(u->type == CUSTACHE_TEMPLATE_BASIC);
+  assert(!strcmp(u->content, "message"));
+  assert(u = u->next);
+  assert(u->type == CUSTACHE_TEMPLATE_STATIC);
+  assert(!strcmp(u->content, "\n"));
+  assert(u = u->next);
+  assert(u->type == CUSTACHE_TEMPLATE_CLOSING);
+  assert(!strcmp(u->content, "messages"));
+  assert(!u->next);
+  assert(!u->child);
+  assert(t = t->next);
+  assert(t->type == CUSTACHE_TEMPLATE_STATIC);
+  assert(!strcmp(t->content, "\n"));
+  assert(t = t->next);
+  assert(t->type == CUSTACHE_TEMPLATE_INVERT);
+  assert(!strcmp(t->content, "message_count"));
+  assert(u = t->child);
+  assert(u->type == CUSTACHE_TEMPLATE_STATIC);
+  assert(!strcmp(u->content, "\nYou have no messages.\n"));
+  assert(u = u->next);
+  assert(u->type == CUSTACHE_TEMPLATE_CLOSING);
+  assert(!strcmp(u->content, "message_count"));
+  assert(!u->next);
+  assert(!u->child);
+  assert(t = t->next);
+  assert(t->type == CUSTACHE_TEMPLATE_STATIC);
+  assert(!strcmp(t->content, "\n"));
+  assert(!t->next);
+  assert(!t->child);
+}
+
 static void test_template_can_be_created_from_a_string() {
   printf("\t\tcan be created from a string");
-  custache_template_t *t = custache_load_template("Hello, {{foo}}", "{{", "}}");
-  assert(sizeof(*t) == sizeof(custache_template_t));
-  assert(!strcmp(t->otag, "{{"));
-  assert(!strcmp(t->ctag, "}}"));
-  assert(t->type == CUSTACHE_TEMPLATE_STATIC);
-  assert(!strcmp(t->content, "Hello, "));
-  assert(t->next);
-  assert(t->next->type == CUSTACHE_TEMPLATE_BASIC);
-  assert(!strcmp(t->next->content, "foo"));
-  custache_free_template(t);
-  t = custache_load_template("Hello, BEGINfooEND", "BEGIN", "END");
-  assert(sizeof(*t) == sizeof(custache_template_t));
-  assert(!strcmp(t->otag, "BEGIN"));
-  assert(!strcmp(t->ctag, "END"));
-  assert(t->type == CUSTACHE_TEMPLATE_STATIC);
-  assert(!strcmp(t->content, "Hello, "));
-  assert(t->next);
-  assert(t->next->type == CUSTACHE_TEMPLATE_BASIC);
-  assert(!strcmp(t->next->content, "foo"));
+  FILE *f = fopen("test.mustache", "r");
+  fseek(f, 0, SEEK_END);
+  long filesize = ftell(f);
+  char *s = (char *)malloc(filesize + 1);
+  fseek(f, 0, SEEK_SET);
+  fread(s, filesize, 1, f);
+  s[(unsigned int) filesize] = 0;
+  fclose(f);
+  custache_template_t *t = custache_load_template(s, "{{", "}}");
+  free(s);
+  test_template_content(t);
   custache_free_template(t);
   printf(" ✓\n");
 }
@@ -41,28 +122,16 @@ static void test_template_can_be_created_from_a_stream() {
   FILE *f = fopen("test.mustache", "r");
   custache_template_t *t = custache_load_template_stream(f, "{{", "}}");
   fclose(f);
-  assert(!strcmp(t->otag, "{{"));
-  assert(!strcmp(t->ctag, "}}"));
-  assert(t->type == CUSTACHE_TEMPLATE_STATIC);
-  assert(!strcmp(t->content, "Hello, "));
-  assert(t->next);
-  assert(t->next->type == CUSTACHE_TEMPLATE_BASIC);
-  assert(!strcmp(t->next->content, "foo"));
+  test_template_content(t);
   custache_free_template(t);
+  printf(" ✓\n");
 }
 
 static void test_template_can_be_created_from_a_file() {
+  printf("\t\tcan be created from a file");
   custache_template_t *t = custache_load_template_file("test.mustache", "{{", "}}");
-  assert(!strcmp(t->otag, "{{"));
-  assert(!strcmp(t->ctag, "}}"));
-  assert(t->type == CUSTACHE_TEMPLATE_STATIC);
-  assert(!strcmp(t->content, "Hello, "));
-  assert(t->next);
-  assert(t->next->type == CUSTACHE_TEMPLATE_BASIC);
-  assert(!strcmp(t->next->content, "foo"));
+  test_template_content(t);
   custache_free_template(t);
-  t = custache_load_template_file("nonexistent", "{{", "}}");
-  assert(!t);
   printf(" ✓\n");
 }
 
