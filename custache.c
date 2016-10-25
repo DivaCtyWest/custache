@@ -218,3 +218,5 @@ const char *custache_render(const custache_template_t *t, const custache_view_t 
 void custache_free_template(template_t *t) {
   free_template(t);
 }
+
+/* Happy birthday you Clonakilty-eating, Ruby-loving rebel LR */
